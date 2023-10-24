@@ -20,7 +20,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get("/storage/{storage_id}/list", [Controllers\StorageAPIController::class, "list"]);
-Route::get("/storage/{storage_id}/thumbnail", [Controllers\StorageAPIController::class, "thumbnail"]);
+Route::middleware('cache.headers:public;max_age=2628000;etag')->group(function () {
+    Route::get("/storage/{storage_id}/thumbnail", [Controllers\StorageAPIController::class, "thumbnail"]);
+});
+
 Route::get("/storage/{storage_id}/get", [Controllers\StorageAPIController::class, "get"]);
 Route::get("/storage/list", [Controllers\StorageAPIController::class, "storages"]);
 Route::post("/storage/add", [Controllers\StorageAPIController::class, "storages_add"]);
