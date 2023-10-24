@@ -8,6 +8,9 @@ use Illuminate\Support\Facades;
 
 class StorageAPIController extends Controller
 {
+    private $IMAGE_EXTS = ["jpg", "png", "webp"];
+    private $VIDEO_EXTS = ["mp4"];
+
     /**
      * 指定されたストレージとパスに含まれるファイルを取得します
      * @param Request $request
@@ -40,9 +43,7 @@ class StorageAPIController extends Controller
                 $files = glob($physical_uri.DIRECTORY_SEPARATOR."*");
                 $responses = [];
                 foreach ($files as $file) {
-                    $filetype = "other";
-                    if (is_dir($file)) $filetype = "directory";
-                    elseif (is_file($file)) $filetype = "file";
+                    $filetype = $this->guess_filetype($file);
 
                     $thumbnail_path = $request->get("path", "/");
                     if (!str_ends_with($thumbnail_path, "/")) $thumbnail_path = $thumbnail_path."/";
@@ -213,5 +214,15 @@ class StorageAPIController extends Controller
         }
 
         return $newstr;
+    }
+
+    private function guess_filetype(string $file) {
+        if (is_dir($file)) return "directory";
+        $pathinfo = pathinfo(basename($file));
+        $extension = $pathinfo['extension'];
+
+        if (in_array($extension, $this->IMAGE_EXTS)) return "image";
+        if (in_array($extension, $this->VIDEO_EXTS)) return "video";
+
     }
 }
