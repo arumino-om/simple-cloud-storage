@@ -44,13 +44,18 @@ class StorageAPIController extends Controller
                     if (is_dir($file)) $filetype = "directory";
                     elseif (is_file($file)) $filetype = "file";
 
+                    $thumbnail_path = $request->get("path", "/");
+                    if (!str_ends_with($thumbnail_path, "/")) $thumbnail_path = $thumbnail_path."/";
+                    $thumbnail_path = $thumbnail_path.basename($file);
+
                     $responses[] = [
                         "name" => basename($file),
                         "filetype" => $filetype,
                         "size" => filesize($file),
                         "createDate" => date("c", filectime($file)),
                         "updateDate" => date("c", fileatime($file)),
-                        "hidden" => str_starts_with($file, ".")
+                        "hidden" => str_starts_with($file, "."),
+                        "thumbnail_uri" => url("/api/storage/".$storageId."/thumbnail?path=".urlencode($thumbnail_path))
                     ];
                 }
 
@@ -135,6 +140,7 @@ class StorageAPIController extends Controller
                 if (is_file($thumb_path)) {
                     // キャッシュ内に存在するならそれを返す
                     return response()->file($thumb_path);
+
                 } elseif (config("app.thumbnail_generator") != null) {
                     // ジェネレーターが存在するならそれを実行
                     $exec_program = config("app.thumbnail_generator")." \"".$physical_realuri."\" \"".$thumb_path."\"";
@@ -184,9 +190,11 @@ class StorageAPIController extends Controller
         ]);
     }
 
-    private function path_combine_cs(string $base, string $comb, bool $replace_win_dirsep = false) {
+    private function path_combine_cs(string $base, string $comb, bool $detect_dirtra = true) {
+        if ($comb === "/") return $base;
+
         // Windowsの場合は、バックスラッシュに置き換える
-        if (str_contains(PHP_OS, "WIN") && $replace_win_dirsep) {
+        if (str_contains(PHP_OS, "WIN")) {
             $base = str_replace("/", "\\", $base);
             $comb = str_replace("/", "\\", $comb);
         }
@@ -199,8 +207,10 @@ class StorageAPIController extends Controller
         if (str_ends_with($newstr, DIRECTORY_SEPARATOR)) $newstr = substr($newstr, 0, -1);
 
         // ディレクトリトラバーサルを検知する
-        $newstr = realpath($newstr);
-        if (!str_starts_with($newstr, $base)) exit();
+        if ($detect_dirtra){
+            $newstr = realpath($newstr);
+            if (!str_starts_with($newstr, $base)) exit();
+        }
 
         return $newstr;
     }
